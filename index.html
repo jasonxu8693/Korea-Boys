@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="board-release" content="2026-10-14-seoul-mobile-v2">
+  <meta name="board-release" content="2026-10-14-phone-release-1">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Korea After Hours · Crew Trip Board</title>
@@ -1007,6 +1007,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 .dock{grid-template-columns:repeat(3,minmax(0,1fr))!important}.km-pack-ideas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}.km-pack-idea{background:#1c1a29;border:1px solid #3b3446;border-radius:16px;overflow:hidden}.km-pack-idea>img{width:100%;height:155px;object-fit:cover}.km-pack-idea>div{padding:16px}.km-pack-idea h3{font-size:18px;margin:10px 0 8px}.km-pack-idea p{font-size:14px;color:#c5bbd4;line-height:1.6;margin:0 0 12px}@media(max-width:760px){.km-pack-ideas{grid-template-columns:1fr}.km-pack-idea{display:grid;grid-template-columns:80px minmax(0,1fr)}.km-pack-idea>img{height:100%;min-height:150px;width:80px}.km-pack-idea h3{font-size:16px}.km-pack-idea p{font-size:13px}.km-pack-idea>div{padding:14px}}
 </style>
+<link rel="stylesheet" href="trial.css">
+<link rel="manifest" href="/Korea-Boys/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/Korea-Boys/icons/app-180.png">
+<meta name="theme-color" content="#14101f">
+<script defer src="/Korea-Boys/pwa-register.js"></script>
 </head>
 <body>
   <div class="app">
@@ -1319,7 +1324,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
   <script>
     document.getElementById("kmTopActions").prepend(document.getElementById("syncChip"));
-    const storage = { failed:false, getItem(k){try{return localStorage.getItem(k)}catch(_){this.failed=true;return null}}, setItem(k,v){try{localStorage.setItem(k,v)}catch(_){this.failed=true}}, removeItem(k){try{localStorage.removeItem(k)}catch(_){this.failed=true}} };
+    const storage = { failed:false, memory:new Map(), getItem(k){try{return localStorage.getItem(k) ?? this.memory.get(k) ?? null}catch(_){this.failed=true;return this.memory.get(k)??null}}, setItem(k,v){this.memory.set(k,String(v));try{localStorage.setItem(k,v)}catch(_){this.failed=true}}, removeItem(k){this.memory.delete(k);try{localStorage.removeItem(k)}catch(_){this.failed=true}} };
     const STORE_KEY = "koreaBoysTripQuestBoardV1";
     // Group sync: Supabase PostgREST (plain fetch — no client library, file stays self-contained).
     // Shared "trip-boards" project, table board_state, one row per board. Migrated from the Google
@@ -1464,6 +1469,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
       { dayId: "d3", time: "05:15", title: "Helsinki connection → London · AY1331 (lands 09:10)", emoji: "🇬🇧", kind: "flight" }
     ];
     function normalizePlan(plan) {
+      // Trial preservation contract: existing saved records are not replanned on load.
+      if (plan && Array.isArray(plan.items)) return structuredClone(plan);
       const p = (plan && typeof plan === "object") ? plan : { generatedAt: null, items: [] };
       if (!Array.isArray(p.items)) p.items = [];
       // One-time seed: merge the starter Seoul+Jeju itinerary in, skipping any stop
@@ -1780,6 +1787,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     // (owners, options, votes, bets, status). Without these, edits to the code defaults never reach a
     // board whose state is already cached in the synced sheet.
     function normalizeIdeas(stored) {
+      if(Array.isArray(stored)) return structuredClone(stored);
       const base = structuredClone(defaultIdeas);
       if (!Array.isArray(stored)) return base;
       const custom = stored.filter(i => i && typeof i.id === "string" && i.id.indexOf("custom_") === 0);
@@ -1791,6 +1799,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     // Options deliberately withdrawn from a room (same resurrection problem as rooms).
     const RETIRED_OPTION_IDS = ["jv_chopstay"];
     function normalizeDeskRooms(stored) {
+      if(Array.isArray(stored)) return structuredClone(stored);
       const base = structuredClone(defaultDesk.rooms);
       if (!Array.isArray(stored)) return base;
       const byId = {}; stored.forEach(r => { if (r && r.id) byId[r.id] = r; });
@@ -1822,6 +1831,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
     const REQUIRED_PLAYERS = [{ name: "Raymond", initials: "R", colour: colours[7], vibe: null, piece: null }];
     function withRequiredPlayers(list) {
+      if(Array.isArray(list)) return structuredClone(list);
       const out = Array.isArray(list) ? list.slice() : [];
       REQUIRED_PLAYERS.forEach(p => {
         if (!out.some(x => x && String(x.name || "").trim().toLowerCase() === p.name.toLowerCase())) out.push({ ...p });
@@ -2001,7 +2011,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     }
 
     function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
-    function selectedPlayer() { return state.players[state.selectedPlayer] || state.players[0]; }
+    function selectedPlayer() { return state.players[state.selectedPlayer] || state.players[0] || {name:"No traveller selected",initials:"?",colour:"#80748d",arrival:{},departure:{}}; }
 
     // Shared progress: the whole crew's token position = how many group bosses are done.
     function groupProgressIndex() {
@@ -3554,6 +3564,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
         const changed = vitinIdx !== Math.max(0, Math.min(total - 1, n));
         vitinIdx = Math.max(0, Math.min(total - 1, n));
         kmView.day=vitinIdx;kmSave();
+        if(changed && window.trialDayChanged) window.trialDayChanged(vitinIdx);
         if(document.getElementById('detailModal').classList.contains('active'))closeDetail();
         requestAnimationFrame(()=>{kmDayActions();if(changed)document.getElementById('kmDayActions')?.scrollIntoView({block:'start',behavior:kmReduced()?'instant':'smooth'})});
         track.querySelectorAll(".vp-slide").forEach((slide,k)=>{slide.hidden=k!==vitinIdx;});
@@ -3574,7 +3585,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     // First-load identity gate (ported from Slovenia). Stored per device, never synced.
     const WHOAMI_KEY = "koreaCrewWhoami";
     let whoPrompted = false;
-    function whoamiSaved() { try { const v = storage.getItem(WHOAMI_KEY); return v == null ? null : Number(v); } catch (e) { return null; } }
+    function whoamiSaved() { try { const v = storage.getItem(WHOAMI_KEY); return v == null || !state.players[Number(v)] ? null : Number(v); } catch (e) { return null; } }
     function setWhoami(idx) { try { storage.setItem(WHOAMI_KEY, String(idx)); } catch (e) {} }
     function openWhoModal() {
       const grid = document.getElementById("whoGrid"), modal = document.getElementById("whoModal");
@@ -4062,9 +4073,79 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     }
     document.getElementById('kmToday').onclick=()=>{kmClose();setActiveTab('plan');document.querySelector('[data-vitin="poster"]').click();const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const index=TRIP_DAYS.findIndex(d=>d.iso===date);const chosen=index<0?Math.max(1,vitinIdx):index+1;document.querySelector(`#vpJump [data-goslide="${chosen}"]`)?.click();document.getElementById('plan').scrollIntoView({block:'start'})};
 
+    // Local trial journey layer. Stable existing data keys are deliberately untouched.
+const TRIAL_KEY='koreaPhoneJourneyV1';
+TRIP_DAYS.forEach(d=>{d.note='Earlier route advice — check against saved stops and tickets: '+d.note;if(['d25','d26'].includes(d.id))d.city='Seoul';if(d.id==='d27')d.city='Seoul → Jeju'});
+let journey={last:'#plan',tabs:{plan:'#plan',desk:'#desk',intel:'#intel'},scroll:{},origins:{}};
+try{const saved=JSON.parse(storage.getItem(TRIAL_KEY)||'null');if(saved&&saved.tabs&&saved.scroll)journey={...journey,...saved}}catch(_){}
+let routing=false,routeReady=false,currentRoute='',drafts={};
+try{drafts=JSON.parse(sessionStorage.getItem('koreaPhoneDraftsV1')||'{}')}catch(_){}
+const trialTab=setActiveTab,trialDetail=openDetail,trialClose=closeDetail;
+const trialPhotoOpen=lbOpen,trialPhotoClose=lbClose;let photoFocus=null;
+lbOpen=function(items,index){photoFocus=document.activeElement;trialPhotoOpen(items,index);document.querySelector('#lightbox button')?.focus({preventScroll:true})};
+lbClose=function(){trialPhotoClose();if(photoFocus?.isConnected)photoFocus.focus({preventScroll:true})};
+const routeLabel=h=>{const d=TRIP_DAYS.find(d=>h==='#plan/'+d.id||h==='#plan/edit/'+d.id);return d?(h.includes('/edit/')?'Edit ':'')+d.date:{'#plan':'Trip overview','#desk':'Crew desk','#intel':'Korea Pack','#intel/install':'Phone help'}[h]||'your previous page'};
+function validRoute(h){return ['#plan','#desk','#intel','#intel/install'].includes(h)||TRIP_DAYS.some(d=>h==='#plan/'+d.id||h==='#plan/edit/'+d.id)||DETAILS.some(d=>h==='#intel/place/'+d.id)}
+function remember(){if(currentRoute){journey.scroll[currentRoute]=scrollY;journey.last=currentRoute;storage.setItem(TRIAL_KEY,JSON.stringify(journey))}}
+function trialNavigate(h,{replace=false,origin=null}={}){if(!validRoute(h))h='#plan';remember();const old=history.state||{};const info={trial:true,origin:origin||journey.origins[h]||null,from:currentRoute};if(origin)journey.origins[h]=origin;if(replace)history.replaceState(info,'',h);else if(location.hash!==h)history.pushState(info,'',h);else Object.assign(info,old);trialRender(h,info)}
+function trialBack(){const parent=history.state?.origin||'#intel';if(history.state?.from===parent)history.back();else trialNavigate(parent,{replace:true})}
+function trialRender(h,info={}){
+ routing=true;currentRoute=h;document.body.dataset.trialDay=String(h.startsWith('#plan/'));const place=h.startsWith('#intel/place/'),help=h==='#intel/install',child=place||help;
+ const owner=info.origin?.split('/')[0].slice(1);const tab=child&&['plan','desk','intel'].includes(owner)?owner:h.split('/')[0].slice(1);
+ trialTab(tab);document.body.dataset.trialChild=String(child);document.querySelectorAll('.trial-page').forEach(e=>e.classList.remove('active'));
+ if(child){document.querySelectorAll('.section').forEach(e=>e.classList.remove('active'));const page=document.getElementById(help?'trialInstall':'trialDetail');page.classList.add('active');page.querySelector('.trial-back').textContent='← Back to '+routeLabel(info.origin||'#intel');
+ if(place){const id=h.split('/').pop();trialDetail(id);const card=document.getElementById('dmCard');document.getElementById('trialDetailContent').append(card);trialClose();card.querySelector('.dm-close')?.setAttribute('tabindex','-1');card.querySelector('.dm-body').insertAdjacentHTML('afterbegin','<p class="trial-source-note">Source reference, not a fresh booking check. Some detail times and booking claims conflict with saved group records. Confirm against your tickets and Crew desk before acting.</p>');document.title=DETAILS.find(d=>d.id===id).name+' · Korea 2026';}}
+ else if(tab==='plan'){const day=TRIP_DAYS.findIndex(d=>h==='#plan/'+d.id||h==='#plan/edit/'+d.id)+1;vitinPosterMode=!h.startsWith('#plan/edit/');applyVitinMode();document.querySelector(`#vpJump [data-goslide="${day}"]`)?.click();if(!vitinPosterMode&&day)document.getElementById('planAddDay').value=TRIP_DAYS[day-1].id;document.title=(day?TRIP_DAYS[day-1].date:'Trip plan')+' · Korea 2026';}
+ else document.title=routeLabel(h)+' · Korea 2026';
+ journey.tabs[tab]=h;journey.last=h;storage.setItem(TRIAL_KEY,JSON.stringify(journey));routing=false;
+ if(child)document.querySelector('.trial-page.active .trial-back')?.focus({preventScroll:true});
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo({top:journey.scroll[h]||0,behavior:'instant'});trialStatus()}));
+}
+setActiveTab=function(tab){if(!routeReady||routing)return trialTab(tab);trialNavigate(journey.tabs[tab]||'#'+tab)};
+openDetail=function(id,img){if(!routeReady)return trialDetail(id,img);trialNavigate('#intel/place/'+id,{origin:currentRoute})};
+closeDetail=function(){if(routeReady&&currentRoute.startsWith('#intel/place/'))trialBack();else trialClose()};
+window.trialDayChanged=n=>{if(routeReady&&!routing)trialNavigate(n?'#plan/'+TRIP_DAYS[n-1].id:'#plan')};
+function trialStatus(){const el=document.getElementById('trialStatus');if(!el)return;el.textContent=storage.failed?'Device storage unavailable — progress lasts only while this page stays open.':!navigator.onLine?'Offline snapshot · shared edits and external maps unavailable. Personal packing still works on this device.':pendingSave?'Changes not yet acknowledged — use the sync control to retry before closing.':(releaseConnection==='offline' ? 'Group connection unavailable — showing the last device snapshot. Tap the sync indicator to retry.' : lastSyncedAt ? 'Group data checked '+new Date(lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' · packing stays on this device.' : 'Checking the group board… Until connected, the plan shown is a saved snapshot.');document.getElementById('trialDrafts').classList.toggle('visible',Object.keys(drafts).length>0)}
+function draftKey(el){if(!el.matches('input:not([type=checkbox]):not([type=radio]),textarea')||el.closest('#whoModal'))return null;const attrs=[...el.attributes].filter(a=>a.name.startsWith('data-')&&a.name!=='data-user-draft').map(a=>a.name+'='+a.value);return el.id||(attrs.length?[el.tagName,...attrs].join('|'):null)}
+function restoreDrafts(){document.querySelectorAll('input,textarea,select').forEach(el=>{const key=draftKey(el);if(key&&drafts[key]!=null){el.value=drafts[key];el.dataset.userDraft='true'}});trialStatus()}
+const releaseDayActions=kmDayActions;
+kmDayActions=function(){releaseDayActions();document.getElementById('releaseTiming')?.remove();const d=TRIP_DAYS[vitinIdx-1];if(!d||!['d25','d27'].includes(d.id))return;const note=document.createElement('p');note.id='releaseTiming';note.className='trial-source-note';note.textContent=d.id==='d25'?'Timing to confirm: the saved colour-analysis plan says 14:00; older reference copy says 10:00 and mixes booked / book-now wording. Check the confirmation before relying on either.':'Flight timing to confirm: the saved plan says roughly 21:00 departure / 22:15 arrival; later reference notes say 20:35 / about 21:50. Use the actual ticket; airport and car-pickup timings depend on it.';document.getElementById('kmDayActions')?.after(note);};
+const trialRenderAll=renderAll;renderAll=function(){trialRenderAll();if(routeReady){restoreDrafts();if(currentRoute.startsWith('#intel/'))trialRender(currentRoute,history.state||{});}};
+function forgetDraftFields(fields){fields.forEach(el=>{delete drafts[draftKey(el)];delete el.dataset.userDraft});try{sessionStorage.setItem('koreaPhoneDraftsV1',JSON.stringify(drafts))}catch(_){}trialStatus()}
+let releaseConnection='syncing';const releaseSyncChip=setSyncChip;
+setSyncChip=function(kind){releaseConnection=kind;releaseSyncChip(kind);if(routeReady)trialStatus();};
+function trialBoot(){
+ document.body.insertAdjacentHTML('afterbegin','<div class="trial-banner">KOREA / 26 · Seoul → Jeju → Shanghai</div><div id="trialDrafts" class="trial-drafts">Unsubmitted field drafts restored in this browser session.<button id="trialDiscard">Discard field drafts</button></div>');
+ const nav=document.querySelector('.nav');nav.insertAdjacentHTML('afterend',`<div class="trial-shell"><section class="trial-context"><span class="trial-kicker">Korea / 2026 · your trip, in reach</span><h2>Seoul nights. Jeju days.</h2><p>24–31 October · Shanghai extension to 3 November for the travellers shown in the plan. Check Crew desk for booked arrangements; suggestions are not bookings.</p><div class="trial-legs"><button data-route="#plan">Overview</button><button data-route="#plan/d24">Seoul · 24 Oct</button><button data-route="#plan/d28">Jeju · 28 Oct</button><button data-route="#plan/d31">Shanghai · 31 Oct</button></div></section><p id="trialStatus" role="status"></p></div>`);
+ document.getElementById('intel').insertAdjacentHTML('afterbegin','<button class="trial-tool" data-route="#intel/install">Add to your phone · offline help</button>');
+ document.getElementById('intel').insertAdjacentHTML('afterend',`<section id="trialDetail" class="trial-page"><button class="trial-back">← Back to Korea Pack</button><div id="trialDetailContent"></div></section><section id="trialInstall" class="trial-page"><button class="trial-back">← Back to Korea Pack</button><article class="trial-help"><span class="trial-kicker">Keep the trip close</span><h2>Add to your phone</h2><p>Optional. You can keep using the website in your browser.</p><h3>iPhone / iPad</h3><p>Open the hosted site in Safari, choose Share, then Add to Home Screen. Use this Korea-Boys website link on your phone.</p><h3>Android</h3><p>Use the browser’s Add to Home screen or Install app menu when available. An install button appears below only when the browser offers installation.</p><button id="trialInstallButton" class="trial-tool" hidden>Install app</button><h3>What works without a connection?</h3><p id="trialCache">The static snapshot must finish downloading on an online visit first. The first-ever offline visit will not work.</p><p>Cached itinerary, guide and included photos can reopen. Your checklist and last group snapshot stay on this device if storage is available. Offline group records are the last snapshot saved on this device and may be stale. Check the sync indicator after reconnecting. Maps, booking providers and shared changes require a connection. No background sync is promised.</p><h3>Updates without losing your place</h3><p id="trialUpdate">A new version waits while old app windows are open. Save changes, resolve any unsaved warning, then close all copies and reopen. Updates never force a reload. Unsubmitted field drafts are session-only: submit or copy them before closing all windows.</p><p>Personal progress uses stable storage keys. Clearing browser data removes it. Choosing a traveller attributes an edit; it is not a private login.</p></article></section>`);
+ document.querySelectorAll('.trial-back').forEach(b=>b.onclick=trialBack);
+ document.addEventListener('click',e=>{const route=e.target.closest('[data-route]'),tab=e.target.closest('.nav [data-tab],.dock [data-tab]'),mode=e.target.closest('[data-vitin]');if(route||tab||mode){e.preventDefault();e.stopImmediatePropagation();if(mode)trialNavigate(mode.dataset.vitin==='edit'?'#plan/edit/'+(TRIP_DAYS[vitinIdx-1]?.id||TRIP_DAYS[0].id):(vitinIdx?'#plan/'+TRIP_DAYS[vitinIdx-1].id:'#plan'));else if(route)trialNavigate(route.dataset.route,{origin:route.dataset.route==='#intel/install'?currentRoute:null});else setActiveTab(tab.dataset.tab);}},true);
+ document.addEventListener('input',e=>{const key=draftKey(e.target);if(!key)return;drafts[key]=e.target.value;try{sessionStorage.setItem('koreaPhoneDraftsV1',JSON.stringify(drafts))}catch(_){}trialStatus()});
+ document.addEventListener('click',e=>{if(!navigator.onLine)return;const b=e.target.closest('button');if(!b)return;const act=b.dataset.desk,container=b.closest('article')||b.parentElement;
+ if(['addopt','addnote','savelog'].includes(act))forgetDraftFields([...container.querySelectorAll('input,textarea')].filter(x=>act==='addopt'&&x.closest('.add-opt')||act==='addnote'&&x.classList.contains('rn-input')||act==='savelog'&&x.dataset.f==='logtext'));
+ if(b.id==='planAddBtn'&&document.getElementById('planAddTitle').value.trim())forgetDraftFields([document.getElementById('planAddTitle'),document.getElementById('planAddTime')]);
+ if(b.dataset.plan==='dayadd')forgetDraftFields([...document.querySelectorAll('[data-dayadd="'+b.dataset.day+'"]')]);
+ },true);
+ document.addEventListener('keydown',e=>{if(navigator.onLine&&e.key==='Enter'&&e.target.matches('.rn-input'))forgetDraftFields([e.target])},true);
+ document.getElementById('trialDiscard').onclick=()=>{document.querySelectorAll('input,textarea').forEach(el=>{if(drafts[draftKey(el)]!=null){el.value=el.defaultValue;delete el.dataset.userDraft}});drafts={};try{sessionStorage.removeItem('koreaPhoneDraftsV1')}catch(_){}renderAll();trialStatus()};
+ let scrollTimer;addEventListener('scroll',()=>{if(!routing){clearTimeout(scrollTimer);scrollTimer=setTimeout(remember,200)}},{passive:true});
+ addEventListener('popstate',()=>trialRender(validRoute(location.hash)?location.hash:'#plan',history.state||{}));
+ addEventListener('hashchange',()=>{if(location.hash!==currentRoute)trialNavigate(location.hash,{replace:true})});
+ addEventListener('pagehide',remember);addEventListener('online',trialStatus);addEventListener('offline',trialStatus);
+ // Stop offline group editing before delegated shared handlers receive the event.
+ for(const event of ['click','change','beforeinput','keydown'])document.addEventListener(event,e=>{if(!navigator.onLine&&(event!=='keydown'||e.key==='Enter'||e.key===' ')&&e.target.closest(editingSelector+',#planEditor button,[data-group],[data-step],[data-done]')){e.preventDefault();e.stopImmediatePropagation();toast('Shared edits need a connection. Your last snapshot remains available.')}},true);
+ window.addEventListener('trip-app-ready',()=>{document.getElementById('trialCache').textContent='Static snapshot downloaded on this browser. Reopen after this visit to use cached itinerary, guide and included photos offline.'});
+ window.addEventListener('trip-app-error',()=>{document.getElementById('trialCache').textContent='The offline download did not complete. Keep a connection or export the text itinerary from Pocket tools.'});
+ window.addEventListener('trip-app-update',()=>{document.getElementById('trialUpdate').textContent='Update available. Submit or copy drafts and resolve unsaved changes, then close all app windows and reopen. No refresh will be forced.';toast('Update available — see Phone help after saving your work.')});
+ let prompt;addEventListener('beforeinstallprompt',e=>{e.preventDefault();prompt=e;document.getElementById('trialInstallButton').hidden=false});document.getElementById('trialInstallButton').onclick=async()=>{if(prompt){await prompt.prompt();prompt=null;document.getElementById('trialInstallButton').hidden=true}};
+ routeReady=true;const initial=validRoute(location.hash)?location.hash:(!location.hash&&validRoute(journey.last)?journey.last:'#plan');history.replaceState(history.state?.trial?history.state:{trial:true},'',initial);trialRender(initial,history.state);restoreDrafts();
+}
+
     spawnLeaves();
     renderAll();
     initPackingList();
+    trialBoot();
     setSyncChip(hasRemoteSync() ? "syncing" : "disabled");
     remotePull({ initial: true }).finally(maybePromptWho);
     startSyncLoops();

@@ -1,7 +1,7 @@
 {
   "generator_version": 1,
   "app_id": "korea-boys",
-  "version": "db619510e0b07c43",
+  "version": "ee350560b76460cd",
   "base_path": "/Korea-Boys/",
   "entry": "index.html",
   "cache_prefix": "trip-korea-boys-bb3e780f48b9-",
@@ -380,7 +380,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "54860f4c9d44345c81de69005b649b22c1685a8fdf9bbb8a5768f194ce889e68"
+      "sha256": "edc118b3b5bfcd6ab3b21468c5ce694e50ec1e19bdc81ecac2acf76416aba305"
     },
     {
       "path": "manifest.webmanifest",

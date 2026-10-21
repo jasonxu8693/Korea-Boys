@@ -1076,7 +1076,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
     <main>
 
-      <section id="desk" class="section"><div class="km-filters km-desk-tabs"><button data-km-desk="open" aria-pressed="true">To decide · <span id="kmOpenCount">—</span></button><button data-km-desk="booked" aria-pressed="false">Booked · <span id="kmBookedCount">—</span></button></div>
+      <section id="desk" class="section"><div class="km-filters km-desk-tabs"><button data-km-desk="open" aria-pressed="true">To decide · <span id="kmOpenCount">—</span></button><button data-km-desk="booked" aria-pressed="false">Booked / done · <span id="kmBookedCount">—</span></button></div>
         <div class="layout">
           <div class="panel pad">
             <div class="panel-head" style="padding:0 0 18px; border-bottom:0">
@@ -1085,7 +1085,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
                 <p class="panel-sub">Put your hand up, share options, vote. Where group jobs get owned and decisions get booked.</p>
               </div>
               <div class="pill-row" style="margin:0">
-                <span class="pill done" id="deskDecidedBadge">0 booked</span>
+                <span class="pill done" id="deskDecidedBadge">0 booked / done</span>
                 <span class="pill warn" id="deskOpenBadge">0 open</span>
                 <span class="pill hot" id="deskOptionsBadge">0 options shared</span>
               </div>
@@ -1102,7 +1102,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
           </div>
           <aside class="side-stack">
             <div class="panel pad">
-              <div class="label">✅ Booked</div>
+              <div class="label">✅ Booked & completed</div>
               <p class="panel-sub" style="margin:6px 0 12px">Locked-in decisions — what's feeding the trip.</p>
               <div id="deskBooked"></div>
             </div>
@@ -1308,7 +1308,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
     </div>
   </div>
   <div class="toast" id="toast"></div>
-  <dialog class="km-dialog" id="kmPocket" aria-labelledby="kmPocketTitle"><div class="km-sheet-head"><h2 id="kmPocketTitle">Your trip pocket</h2><button id="kmPocketClose" aria-label="Close pocket">×</button></div><p id="kmOpenDecisions"></p><div class="km-pocket-grid"><button id="kmToday">Open my day<small>Today, or your last day viewed</small></button><button id="kmIdentityButton"><span id="kmIdentity">Choose your name</span><small>Vote as yourself · this device</small></button><button id="kmDecisions">Open decisions<small>Help the crew get booked</small></button><button id="kmBookings">Booked plans<small>Stays, flights and decisions</small></button><button id="kmOffline">Save offline pack<small>Download the itinerary as text</small></button><button id="kmRefresh">Refresh group data<small id="kmPocketStatus">Checking…</small></button></div><p class="km-offline-note">Votes, notes and plans use the existing group sync. Your name, packing ticks, filters and last-viewed day stay on this device. Downloads are snapshots; map links need internet.</p><h3>Latest from the crew</h3><ul id="kmFeed" class="km-pocket-feed"></ul></dialog>
+  <dialog class="km-dialog" id="kmPocket" aria-labelledby="kmPocketTitle"><div class="km-sheet-head"><h2 id="kmPocketTitle">Your trip pocket</h2><button id="kmPocketClose" aria-label="Close pocket">×</button></div><p id="kmOpenDecisions"></p><div class="km-pocket-grid"><button id="kmToday">Open my day<small>Today, or your last day viewed</small></button><button id="kmIdentityButton"><span id="kmIdentity">Choose your name</span><small>Vote as yourself · this device</small></button><button id="kmDecisions">Open decisions<small>Help the crew get booked</small></button><button id="kmBookings">Booked & completed<small>Stays, flights and completed tasks</small></button><button id="kmOffline">Save offline pack<small>Download the itinerary as text</small></button><button id="kmRefresh">Refresh group data<small id="kmPocketStatus">Checking…</small></button></div><p class="km-offline-note">Votes, notes and plans use the existing group sync. Your name, packing ticks, filters and last-viewed day stay on this device. Downloads are snapshots; map links need internet.</p><h3>Latest from the crew</h3><ul id="kmFeed" class="km-pocket-feed"></ul></dialog>
   <dialog class="km-dialog" id="kmTextDialog" aria-labelledby="kmTextTitle"><div class="km-sheet-head"><h2 id="kmTextTitle">Copy your day</h2><button id="kmTextClose" aria-label="Close copy sheet">×</button></div><p>Automatic copying is unavailable in this browser. Select and copy the text below.</p><textarea id="kmCopyText" class="km-copy-text" readonly aria-label="Day plan to copy"></textarea></dialog>
 
   <div id="detailModal" class="dmodal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Details"><div class="dm-card" id="dmCard"></div></div>
@@ -2811,7 +2811,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
       const bookedHolder = document.getElementById("deskBooked");
       if (bookedHolder) {
-        bookedHolder.innerHTML = booked.length ? booked.map(deskBookedCard).join("") : `<div class="micro">Nothing booked yet.</div>`;
+        bookedHolder.innerHTML = booked.length ? booked.map(deskBookedCard).join("") : `<div class="micro">No booked or completed items yet.</div>`;
         bindDeskActions(bookedHolder);
       }
 
@@ -2822,7 +2822,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
       const decidedCount = booked.length;
       const openCount = open.length;
       const optCount = rooms.reduce((s, r) => s + (r.options ? r.options.length : 0), 0);
-      const db = document.getElementById("deskDecidedBadge"); if (db) db.textContent = `${decidedCount} booked`;
+      const db = document.getElementById("deskDecidedBadge"); if (db) db.textContent = `${decidedCount} booked / done`;
       const ob = document.getElementById("deskOpenBadge"); if (ob) ob.textContent = `${openCount} open`;
       const opb = document.getElementById("deskOptionsBadge"); if (opb) opb.textContent = `${optCount} option${optCount === 1 ? "" : "s"} shared`;
       const bds = document.getElementById("boardDeskStatus"); if (bds) bds.textContent = `${openCount} open · ${decidedCount} decided`;
